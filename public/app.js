@@ -110,25 +110,34 @@ function renderResult(data) {
 
 function renderCoreMetrics(result) {
   const validity = getValidity(result);
+  const platform = result.platform || result.provider || "未知平台";
 
-  return [
-    metric("有效性", validity.label, {
-      valueState: "has-value",
-      tone: validity.tone
-    }),
-    metric("总额", formatValue(result.balance, result.unit), {
-      valueState: getValueState(result.balance)
-    }),
-    metric("已用", formatValue(result.used, result.unit), {
-      valueState: getValueState(result.used)
-    }),
-    metric("剩余", formatValue(result.remaining, result.unit), {
-      valueState: getValueState(result.remaining)
-    }),
-    metric("到期时间", formatExpiry(result), {
-      valueState: result.neverExpires || hasDisplayValue(result.expiresAt) ? "has-value" : "empty-value"
-    })
-  ].join("");
+  return `
+    <div class="result-status-line">
+      <strong>${escapeHtml(platform)}</strong>
+      <span class="validity-text tone-${validity.tone}">${escapeHtml(validity.label)}</span>
+    </div>
+    <div class="remaining-row">
+      ${metric("剩余额度", formatValue(result.remaining, result.unit), {
+        valueState: getValueState(result.remaining),
+        featured: true
+      })}
+    </div>
+    <div class="summary-grid compact-summary-grid">
+      ${[
+        metric("总额", formatValue(result.balance, result.unit), {
+          valueState: getValueState(result.balance)
+        }),
+        metric("已用", formatValue(result.used, result.unit), {
+          valueState: getValueState(result.used)
+        }),
+        metric("到期时间", formatExpiry(result), {
+          valueState:
+            result.neverExpires || hasDisplayValue(result.expiresAt) ? "has-value" : "empty-value"
+        })
+      ].join("")}
+    </div>
+  `;
 }
 
 function renderOtherMetrics(result) {
@@ -175,6 +184,7 @@ function metric(label, value, options = {}) {
   const classes = [
     "metric",
     options.detail ? "detail-metric" : "",
+    options.featured ? "featured-metric" : "",
     options.valueState || getValueState(value),
     options.tone ? `tone-${options.tone}` : ""
   ]
