@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- view repo on https://www.github.com/sean908 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI API Key Checker</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="tool-panel" aria-labelledby="page-title">
+        <div class="title-row">
+          <div>
+            <p class="eyebrow">AI API Hub</p>
+            <h1 id="page-title">Key 查询</h1>
+          </div>
+          <span class="mode-pill" id="status-pill">Ready</span>
+        </div>
+
+        <form id="check-form" class="form">
+          <label>
+            <span>Base URL</span>
+            <input
+              name="base_url"
+              type="url"
+              placeholder="https://api.example.com"
+              autocomplete="url"
+              required
+            />
+          </label>
+
+          <label>
+            <span>API Key</span>
+            <div class="inline-field">
+              <input
+                id="api-key"
+                name="api_key"
+                type="password"
+                placeholder="sk-..."
+                autocomplete="off"
+                required
+              />
+              <button type="button" class="secondary compact" id="toggle-key">显示</button>
+            </div>
+          </label>
+
+          <label>
+            <span>访问码</span>
+            <input
+              name="access_token"
+              type="password"
+              placeholder="私用模式需要"
+              autocomplete="off"
+            />
+          </label>
+
+          <button class="primary" type="submit" id="submit-button">查询</button>
+        </form>
+      </section>
+
+      <section class="result-panel" aria-live="polite">
+        <div class="empty-state" id="empty-state">
+          <h2>等待查询</h2>
+          <p>输入中转站地址和 key 后，这里会显示额度、到期时间和模型限制。</p>
+        </div>
+
+        <div class="hidden" id="result-view">
+          <div class="summary-grid" id="summary-grid"></div>
+
+          <details class="details-panel hidden" id="other-details">
+            <summary>其他</summary>
+            <div class="detail-grid" id="other-grid"></div>
+          </details>
+
+          <details class="details-panel json-details" id="json-details">
+            <summary>JSON</summary>
+            <div class="json-actions">
+              <button type="button" class="secondary compact" id="copy-json">复制</button>
+            </div>
+            <pre id="json-output"></pre>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
