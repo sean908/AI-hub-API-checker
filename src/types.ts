@@ -5,6 +5,9 @@ export interface Env {
   ACCESS_MODE?: string;
   ACCESS_TOKEN?: string;
   REQUEST_TIMEOUT_MS?: string;
+  APP_VERSION?: string;
+  BUILD_SHA?: string;
+  GITHUB_ICON_URLS?: string;
 }
 
 export interface CheckRequestBody {

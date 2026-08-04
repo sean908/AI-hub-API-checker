@@ -1,3 +1,6 @@
+import { renderVersionLabel } from "./version.js";
+import { loadGithubIcon } from "./github-icon.js";
+
 const form = document.querySelector("#check-form");
 const apiKeyInput = document.querySelector("#api-key");
 const toggleKeyButton = document.querySelector("#toggle-key");
@@ -11,8 +14,19 @@ const otherGrid = document.querySelector("#other-grid");
 const jsonDetails = document.querySelector("#json-details");
 const jsonOutput = document.querySelector("#json-output");
 const copyJsonButton = document.querySelector("#copy-json");
+const appVersion = document.querySelector("#app-version");
+const githubIcon = document.querySelector("#github-icon");
 
 let latestJson = "";
+
+loadVersion();
+loadGithubIcon(githubIcon);
+
+async function loadVersion() {
+  if (appVersion) {
+    await renderVersionLabel(appVersion);
+  }
+}
 
 toggleKeyButton.addEventListener("click", () => {
   const shouldShow = apiKeyInput.type === "password";

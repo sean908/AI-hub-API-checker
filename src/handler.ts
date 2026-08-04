@@ -2,6 +2,8 @@ import { probeProviders, UnsupportedProviderError } from "./adapters";
 import { ApiError, errorResponse, jsonResponse } from "./http";
 import { validateBaseUrl } from "./security";
 import type { CheckRequestBody, Env } from "./types";
+import { getVersionInfo } from "./version";
+import { getPublicConfig } from "./config";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_TIMEOUT_MS = 30_000;
@@ -19,6 +21,14 @@ export async function handleRequest(
 ): Promise<Response> {
   const url = new URL(request.url);
 
+  if (url.pathname === "/api/version") {
+    return handleVersion(request, env);
+  }
+
+  if (url.pathname === "/api/config") {
+    return handleConfig(request, env);
+  }
+
   if (url.pathname === "/api/check") {
     return handleCheck(request, env, deps);
   }
@@ -28,6 +38,52 @@ export async function handleRequest(
   }
 
   return new Response("Not found", { status: 404 });
+}
+
+function handleVersion(request: Request, env: Env): Response {
+  if (request.method !== "GET") {
+    return jsonResponse(
+      {
+        ok: false,
+        status: "method_not_allowed",
+        error: {
+          code: "method_not_allowed",
+          message: "use GET /api/version"
+        }
+      },
+      {
+        status: 405,
+        headers: {
+          allow: "GET"
+        }
+      }
+    );
+  }
+
+  return jsonResponse(getVersionInfo(env));
+}
+
+function handleConfig(request: Request, env: Env): Response {
+  if (request.method !== "GET") {
+    return jsonResponse(
+      {
+        ok: false,
+        status: "method_not_allowed",
+        error: {
+          code: "method_not_allowed",
+          message: "use GET /api/config"
+        }
+      },
+      {
+        status: 405,
+        headers: {
+          allow: "GET"
+        }
+      }
+    );
+  }
+
+  return jsonResponse(getPublicConfig(env));
 }
 
 async function handleCheck(request: Request, env: Env, deps: HandlerDeps): Promise<Response> {

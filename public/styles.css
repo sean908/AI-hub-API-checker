@@ -60,6 +60,34 @@ input {
   align-items: center;
 }
 
+.title-actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.github-link {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  width: 36px;
+}
+
+.github-link:hover {
+  border-color: #aab6bf;
+}
+
+.github-link img {
+  display: block;
+  height: 20px;
+  width: 20px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--muted);
@@ -380,6 +408,11 @@ pre {
   display: none;
 }
 
+.app-version {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 @media (max-width: 840px) {
   .shell {
     grid-template-columns: 1fr;
@@ -400,6 +433,11 @@ pre {
   .title-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .title-actions {
+    justify-content: space-between;
+    width: 100%;
   }
 
   .summary-grid {
