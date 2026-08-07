@@ -1,0 +1,5 @@
+ACCESS_MODE=private
+ACCESS_TOKEN=change-me
+REQUEST_TIMEOUT_MS=10000
+GITHUB_ICON_URLS="https://example.com/icon-a.png
+https://example.com/icon-b.svg"

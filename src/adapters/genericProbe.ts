@@ -127,7 +127,8 @@ function extractGenericUsage(json: unknown, sourcePath: string): NormalizedUsage
       expiresAt: expires.expiresAt,
       expiresAtUnix: expires.expiresAtUnix,
       neverExpires: expires.neverExpires,
-      models: modelList(record.model_limits ?? record.models),
+      models: [],
+      modelLimits: modelList(record.model_limits),
       raw: json
     };
   }

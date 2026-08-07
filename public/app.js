@@ -157,7 +157,8 @@ function renderCoreMetrics(result) {
 function renderOtherMetrics(result) {
   const details = [
     detailMetric("平台", result.platform || result.provider),
-    detailMetric("模型", formatModels(result.models), result.models),
+    detailMetric("可用模型", formatModels(result.models), result.models),
+    detailMetric("模型限制", formatModels(result.modelLimits), result.modelLimits),
     detailMetric("Key 状态", result.status),
     detailMetric("Token 名称", result.tokenName),
     detailMetric("Source path", result.sourcePath),
@@ -306,7 +307,7 @@ function formatExpiry(result) {
 
 function formatModels(models) {
   if (!Array.isArray(models) || models.length === 0) {
-    return "未限制/未知";
+    return "未知";
   }
 
   return models.join(", ");

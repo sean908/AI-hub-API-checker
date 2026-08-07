@@ -2,6 +2,7 @@ import { ApiError } from "../http";
 import type { NormalizedUsage, ProbeAttempt, ProbeContext } from "../types";
 import { genericProbeAdapter } from "./genericProbe";
 import { newApiAdapter } from "./newApi";
+import { discoverModels } from "./modelDiscovery";
 import { sub2apiAdapter } from "./sub2api";
 
 const adapters = [newApiAdapter, sub2apiAdapter, genericProbeAdapter];
@@ -21,8 +22,21 @@ export async function probeProviders(context: ProbeContext): Promise<ProbeSucces
     attempts.push(outcome.attempt);
 
     if (outcome.kind === "matched") {
+      if (outcome.result.sourcePath === "/v1/models") {
+        return {
+          result: outcome.result,
+          attempts
+        };
+      }
+
+      const discovery = await discoverModels(context);
+      attempts.push(discovery.attempt);
+
       return {
-        result: outcome.result,
+        result: {
+          ...outcome.result,
+          models: discovery.models
+        },
         attempts
       };
     }

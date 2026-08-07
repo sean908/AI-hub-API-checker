@@ -1,6 +1,6 @@
 import { fetchJsonWithLimits, UpstreamFetchError, type FetchJsonResult } from "../fetchJson";
 import { joinUrl } from "../security";
-import type { NormalizedUsage, ProviderAdapter } from "../types";
+import type { AdapterResult, NormalizedUsage, ProviderAdapter } from "../types";
 import {
   asRecord,
   authFailed,
@@ -13,11 +13,11 @@ import {
   upstreamError,
   type ProbeAttemptInput
 } from "./common";
+import { discoverModels } from "./modelDiscovery";
 
 const USAGE_PATH = "/v1/usage";
-const MODELS_PATH = "/v1/models";
 const USAGE_ENTRYPOINT_PATH = "/usage";
-const MODELS_ENTRYPOINT_PATH = "/models";
+const MODELS_PATH = "/v1/models";
 const PROVIDER = "sub2api";
 const PLATFORM = "Sub2API";
 
@@ -96,34 +96,11 @@ function baseUrlEndsWithV1(baseUrl: string): boolean {
 async function probeModels(
   context: Parameters<ProviderAdapter["probe"]>[0],
   previousAttempt: ProbeAttemptInput
-) {
-  const attempt = {
-    provider: PROVIDER,
-    path: MODELS_PATH
-  };
+): Promise<AdapterResult> {
+  const discovery = await discoverModels(context);
 
-  try {
-    const response = await fetchSub2apiJson(context, MODELS_PATH, MODELS_ENTRYPOINT_PATH);
-    const attemptWithStatus = { ...attempt, status: response.status };
-
-    if (isAuthFailure(response.status)) {
-      return authFailed(attemptWithStatus);
-    }
-
-    if (isProbeMiss(response.status)) {
-      return notMatched(previousAttempt);
-    }
-
-    if (!response.ok) {
-      return upstreamError(attemptWithStatus, `upstream returned HTTP ${response.status}`);
-    }
-
-    const models = extractModels(response.json);
-    if (models.length === 0) {
-      return notMatched(attemptWithStatus);
-    }
-
-    return matched(attemptWithStatus, {
+  if (discovery.attempt.outcome === "matched") {
+    return matched(discovery.attempt, {
       provider: PROVIDER,
       platform: PLATFORM,
       sourcePath: MODELS_PATH,
@@ -133,20 +110,20 @@ async function probeModels(
       unit: "unknown",
       expiresAt: null,
       expiresAtUnix: null,
-      models,
-      raw: response.json
+      models: discovery.models,
+      raw: null
     });
-  } catch (error) {
-    if (error instanceof UpstreamFetchError) {
-      if (error.code === "timeout" || error.code === "network_error") {
-        return upstreamError(attempt, error.message);
-      }
-
-      return notMatched(previousAttempt);
-    }
-
-    return upstreamError(attempt, "sub2api models probe failed");
   }
+
+  if (discovery.attempt.outcome === "auth_failed") {
+    return authFailed(discovery.attempt);
+  }
+
+  if (discovery.attempt.outcome === "upstream_error") {
+    return upstreamError(discovery.attempt, "sub2api models probe failed");
+  }
+
+  return notMatched(previousAttempt);
 }
 
 function extractUsage(json: unknown, sourcePath: string): NormalizedUsage | null {
@@ -171,13 +148,13 @@ function extractUsage(json: unknown, sourcePath: string): NormalizedUsage | null
 
   const usageWindows = extractUsageWindows(data, usage);
   const rateLimits = extractRateLimits(data);
-  const models = extractModels(data.models ?? root.models ?? root.data);
+  const modelLimits = modelList(data.model_limits);
 
   if (
     balance === null &&
     used === null &&
     remaining === null &&
-    models.length === 0 &&
+    modelLimits.length === 0 &&
     Object.keys(usageWindows).length === 0 &&
     Object.keys(rateLimits).length === 0
   ) {
@@ -201,7 +178,8 @@ function extractUsage(json: unknown, sourcePath: string): NormalizedUsage | null
     expiresAt: expires.expiresAt,
     expiresAtUnix: expires.expiresAtUnix,
     neverExpires: expires.neverExpires,
-    models,
+    models: [],
+    ...(modelLimits.length > 0 ? { modelLimits } : {}),
     usageWindows: Object.keys(usageWindows).length > 0 ? usageWindows : undefined,
     rateLimits: Object.keys(rateLimits).length > 0 ? rateLimits : undefined,
     raw: json
@@ -280,64 +258,6 @@ function getRateLimitRecords(data: Record<string, unknown>): Record<string, unkn
     const record = asRecord(item);
     return record ? [record] : [];
   });
-}
-
-function extractModels(value: unknown): string[] {
-  const root = asRecord(value);
-  const data = asRecord(root?.data);
-  const candidates = [
-    root?.models,
-    data?.models,
-    root?.data,
-    Array.isArray(value) ? value : undefined,
-    value
-  ];
-
-  for (const candidate of candidates) {
-    const models = modelsFromCandidate(candidate);
-    if (models.length > 0) {
-      return models;
-    }
-  }
-
-  return [];
-}
-
-function modelsFromCandidate(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => {
-      if (typeof item === "string" && item.length > 0) {
-        return [item];
-      }
-
-      const record = asRecord(item);
-      const id = record ? stringField(record, ["id", "name", "model"]) : undefined;
-      return id ? [id] : [];
-    });
-  }
-
-  const record = asRecord(value);
-  if (!record) {
-    return [];
-  }
-
-  const directModel = stringField(record, ["id", "name", "model"]);
-  if (directModel) {
-    return [directModel];
-  }
-
-  const values = Object.values(record);
-  const looksLikeModelMap =
-    values.length > 0 &&
-    values.every(
-      (item) =>
-        typeof item === "boolean" ||
-        typeof item === "number" ||
-        typeof item === "string" ||
-        item === null
-    );
-
-  return looksLikeModelMap ? modelList(record) : [];
 }
 
 function calculateRemaining(balance: number | null, used: number | null): number | null {

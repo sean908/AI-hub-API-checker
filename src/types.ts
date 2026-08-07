@@ -31,6 +31,7 @@ export interface NormalizedUsage {
   expiresAtUnix: number | null;
   neverExpires?: boolean;
   models: string[];
+  modelLimits?: string[];
   modelLimitsEnabled?: boolean;
   usageWindows?: {
     usage5h?: number;

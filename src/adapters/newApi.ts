@@ -76,7 +76,8 @@ export const newApiAdapter: ProviderAdapter = {
         expiresAt: expires.expiresAt,
         expiresAtUnix: expires.expiresAtUnix,
         neverExpires: expires.neverExpires,
-        models: modelList(data.model_limits),
+        models: [],
+        modelLimits: modelList(data.model_limits),
         modelLimitsEnabled: booleanField(data, ["model_limits_enabled"]),
         raw: response.json
       });
