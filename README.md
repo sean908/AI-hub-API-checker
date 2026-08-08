@@ -1,6 +1,6 @@
 # AI API Key Checker
 
-Cloudflare Workers Web 工具，用于查询 AI API 中转站 key 的余额、用量、到期时间和模型限制。
+Cloudflare Workers Web 工具，用于查询 AI API 中转站 key 的余额、用量、到期时间、可用模型和模型限制。
 
 ## 本地开发
 
@@ -53,6 +53,8 @@ cp .dev.vars.example .dev.vars
 三类已识别 provider 在验证成功后都会尝试 OpenAI 兼容的 models endpoint（`/v1/models` 或 `/models`），获取该 API Key 可见的模型列表写入 `result.models`。模型发现失败不影响已验证的额度检测：`/api/check` 仍返回 `ok: true` 和原有余额/用量数据，此时 `models` 为空数组，模型请求的 `attempt` 会记录 `not_matched`/`auth_failed`/`upstream_error` 之一。
 
 `result.modelLimits` 仅承载上游明确提供的 Token 限制（New API 的 `data.model_limits` 等字面 `model_limits` 字段），不会从模糊的 `models` 字段推断；上游未提供时该字段省略。
+
+页面会将 `result.models` 独立显示为“可用模型”列表，每个模型都有单独的复制按钮。过长模型名仅在页面上保留首尾并以 `...` 截断，最多显示 20 个字符；复制时仍使用完整的原始模型名。
 
 Sub2API 仅使用页面输入的 API key，不要求 JWT。因此用户余额、订阅信息和完整 key 列表等 `/api/v1/*` 用户管理数据不在当前查询范围内。
 

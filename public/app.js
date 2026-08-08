@@ -1,5 +1,12 @@
 import { renderVersionLabel } from "./version.js";
 import { loadGithubIcon } from "./github-icon.js";
+import {
+  copyText,
+  escapeHtml,
+  formatModels,
+  renderModelList,
+  showCopyFeedback
+} from "./model-list.js";
 
 const form = document.querySelector("#check-form");
 const apiKeyInput = document.querySelector("#api-key");
@@ -94,6 +101,21 @@ copyJsonButton.addEventListener("click", async () => {
   }, 1200);
 });
 
+otherGrid.addEventListener("click", async (event) => {
+  const copyButton = event.target.closest(".model-copy");
+  if (!copyButton) {
+    return;
+  }
+
+  const modelName = copyButton.dataset.modelName;
+  if (typeof modelName !== "string" || modelName.length === 0) {
+    return;
+  }
+
+  const status = await copyText(modelName);
+  showCopyFeedback(copyButton, status);
+});
+
 function renderResult(data) {
   emptyState.classList.add("hidden");
   resultView.classList.remove("hidden");
@@ -156,13 +178,10 @@ function renderCoreMetrics(result) {
 
 function renderOtherMetrics(result) {
   const details = [
-    detailMetric("平台", result.platform || result.provider),
-    detailMetric("可用模型", formatModels(result.models), result.models),
+    detailMetric("Token 名称", result.tokenName),
+    detailMetricHtml("可用模型", renderModelList(result.models), result.models, { wide: true }),
     detailMetric("模型限制", formatModels(result.modelLimits), result.modelLimits),
     detailMetric("Key 状态", result.status),
-    detailMetric("Token 名称", result.tokenName),
-    detailMetric("Source path", result.sourcePath),
-    detailMetric("Provider", result.provider),
     detailMetric("5h 用量", formatValue(result.usageWindows?.usage5h, result.unit), result.usageWindows?.usage5h),
     detailMetric("1d 用量", formatValue(result.usageWindows?.usage1d, result.unit), result.usageWindows?.usage1d),
     detailMetric("7d 用量", formatValue(result.usageWindows?.usage7d, result.unit), result.usageWindows?.usage7d),
@@ -194,11 +213,25 @@ function detailMetric(label, value, rawValue = value) {
   });
 }
 
+function detailMetricHtml(label, html, rawValue = html, options = {}) {
+  if (!hasDisplayValue(rawValue)) {
+    return "";
+  }
+
+  return metric(label, html, {
+    valueState: "has-value",
+    detail: true,
+    html: true,
+    ...options
+  });
+}
+
 function metric(label, value, options = {}) {
   const valueText = hasDisplayValue(value) ? String(value) : "未知";
   const classes = [
     "metric",
     options.detail ? "detail-metric" : "",
+    options.wide ? "detail-metric-wide" : "",
     options.featured ? "featured-metric" : "",
     options.valueState || getValueState(value),
     options.tone ? `tone-${options.tone}` : ""
@@ -206,9 +239,8 @@ function metric(label, value, options = {}) {
     .filter(Boolean)
     .join(" ");
 
-  return `<div class="${classes}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(
-    valueText
-  )}</strong></div>`;
+  const renderedValue = options.html ? valueText : escapeHtml(valueText);
+  return `<div class="${classes}"><span>${escapeHtml(label)}</span><strong>${renderedValue}</strong></div>`;
 }
 
 function formatValue(value, unit) {
@@ -305,24 +337,7 @@ function formatExpiry(result) {
   }).format(new Date(result.expiresAt));
 }
 
-function formatModels(models) {
-  if (!Array.isArray(models) || models.length === 0) {
-    return "未知";
-  }
-
-  return models.join(", ");
-}
-
 function setStatus(kind, text) {
   statusPill.className = `mode-pill ${kind}`;
   statusPill.textContent = text;
-}
-
-function escapeHtml(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
