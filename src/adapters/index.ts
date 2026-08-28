@@ -22,13 +22,6 @@ export async function probeProviders(context: ProbeContext): Promise<ProbeSucces
     attempts.push(outcome.attempt);
 
     if (outcome.kind === "matched") {
-      if (outcome.result.sourcePath === "/v1/models") {
-        return {
-          result: outcome.result,
-          attempts
-        };
-      }
-
       const discovery = await discoverModels(context);
       attempts.push(discovery.attempt);
 
@@ -52,6 +45,29 @@ export async function probeProviders(context: ProbeContext): Promise<ProbeSucces
     }
   }
 
+  // No usage/quota adapter identified the provider. The key may still grant access to a
+  // plain OpenAI-compatible models endpoint, so fall back to neutral model discovery
+  // rather than misreporting an unrecognized provider as Sub2API. If a key was
+  // explicitly rejected by an adapter, probing models would fail too, so honor that
+  // auth failure without issuing extra requests.
+  if (!lastAuthFailure) {
+    const discovery = await discoverModels(context);
+    attempts.push(discovery.attempt);
+
+    if (discovery.attempt.outcome === "matched") {
+      return {
+        result: openAiCompatibleResult(discovery),
+        attempts
+      };
+    }
+
+    if (discovery.attempt.outcome === "auth_failed") {
+      lastAuthFailure = "upstream rejected the API key on the models endpoint";
+    } else if (discovery.attempt.outcome === "upstream_error") {
+      lastUpstreamError ??= "openai-models probe failed";
+    }
+  }
+
   if (lastAuthFailure) {
     throw new ApiError(401, "auth_failed", lastAuthFailure);
   }
@@ -61,6 +77,25 @@ export async function probeProviders(context: ProbeContext): Promise<ProbeSucces
   }
 
   throw new UnsupportedProviderError(attempts);
+}
+
+function openAiCompatibleResult(discovery: {
+  models: string[];
+  attempt: ProbeAttempt;
+}): NormalizedUsage {
+  return {
+    provider: discovery.attempt.provider,
+    platform: "OpenAI-compatible",
+    sourcePath: discovery.attempt.path,
+    balance: null,
+    used: null,
+    remaining: null,
+    unit: "unknown",
+    expiresAt: null,
+    expiresAtUnix: null,
+    models: discovery.models,
+    raw: null
+  };
 }
 
 export class UnsupportedProviderError extends ApiError {

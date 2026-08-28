@@ -83,7 +83,9 @@ export const newApiAdapter: ProviderAdapter = {
       });
     } catch (error) {
       if (error instanceof UpstreamFetchError) {
-        return upstreamError(attempt, error.message);
+        const attemptWithStatus =
+          error.httpStatus !== undefined ? { ...attempt, status: error.httpStatus } : attempt;
+        return upstreamError(attemptWithStatus, error.message);
       }
 
       return upstreamError(attempt, "new-api probe failed");

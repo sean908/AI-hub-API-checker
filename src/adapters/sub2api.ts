@@ -1,6 +1,6 @@
 import { fetchJsonWithLimits, UpstreamFetchError, type FetchJsonResult } from "../fetchJson";
 import { joinUrl } from "../security";
-import type { AdapterResult, NormalizedUsage, ProviderAdapter } from "../types";
+import type { NormalizedUsage, ProviderAdapter } from "../types";
 import {
   asRecord,
   authFailed,
@@ -10,14 +10,11 @@ import {
   notMatched,
   numberField,
   stringField,
-  upstreamError,
-  type ProbeAttemptInput
+  upstreamError
 } from "./common";
-import { discoverModels } from "./modelDiscovery";
 
 const USAGE_PATH = "/v1/usage";
 const USAGE_ENTRYPOINT_PATH = "/usage";
-const MODELS_PATH = "/v1/models";
 const PROVIDER = "sub2api";
 const PLATFORM = "Sub2API";
 
@@ -42,18 +39,18 @@ export const sub2apiAdapter: ProviderAdapter = {
         if (usage) {
           return matched(usageAttemptWithStatus, usage);
         }
-      } else if (!isProbeMiss(usageResponse.status)) {
-        return upstreamError(usageAttemptWithStatus, `upstream returned HTTP ${usageResponse.status}`);
+
+        return notMatched(usageAttemptWithStatus);
       }
 
-      return await probeModels(context, usageAttemptWithStatus);
+      if (isProbeMiss(usageResponse.status)) {
+        return notMatched(usageAttemptWithStatus);
+      }
+
+      return upstreamError(usageAttemptWithStatus, `upstream returned HTTP ${usageResponse.status}`);
     } catch (error) {
       if (error instanceof UpstreamFetchError) {
-        if (error.code === "timeout" || error.code === "network_error") {
-          return upstreamError(usageAttempt, error.message);
-        }
-
-        return await probeModels(context, usageAttempt);
+        return upstreamError(usageAttempt, error.message);
       }
 
       return upstreamError(usageAttempt, "sub2api probe failed");
@@ -91,39 +88,6 @@ function getSub2apiUrl(baseUrl: string, versionedPath: string, entryPointPath: s
 function baseUrlEndsWithV1(baseUrl: string): boolean {
   const pathname = new URL(baseUrl).pathname.replace(/\/+$/, "");
   return pathname === "/v1" || pathname.endsWith("/v1");
-}
-
-async function probeModels(
-  context: Parameters<ProviderAdapter["probe"]>[0],
-  previousAttempt: ProbeAttemptInput
-): Promise<AdapterResult> {
-  const discovery = await discoverModels(context);
-
-  if (discovery.attempt.outcome === "matched") {
-    return matched(discovery.attempt, {
-      provider: PROVIDER,
-      platform: PLATFORM,
-      sourcePath: MODELS_PATH,
-      balance: null,
-      used: null,
-      remaining: null,
-      unit: "unknown",
-      expiresAt: null,
-      expiresAtUnix: null,
-      models: discovery.models,
-      raw: null
-    });
-  }
-
-  if (discovery.attempt.outcome === "auth_failed") {
-    return authFailed(discovery.attempt);
-  }
-
-  if (discovery.attempt.outcome === "upstream_error") {
-    return upstreamError(discovery.attempt, "sub2api models probe failed");
-  }
-
-  return notMatched(previousAttempt);
 }
 
 function extractUsage(json: unknown, sourcePath: string): NormalizedUsage | null {

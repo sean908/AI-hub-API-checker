@@ -58,7 +58,9 @@ cp .dev.vars.example .dev.vars
 
 Sub2API 仅使用页面输入的 API key，不要求 JWT。因此用户余额、订阅信息和完整 key 列表等 `/api/v1/*` 用户管理数据不在当前查询范围内。
 
-Sub2API 的 `/v1/usage` 与 `/v1/models` 是网关代理端点，可能把额外请求转发到上游模型服务。usage 验证成功后会继续请求一次 OpenAI 兼容的 models endpoint；当 Base URL 已以 `/v1` 结尾时请求 `/models`，否则请求 `/v1/models`，并将发现的模型与 usage 结果合并。模型发现失败不会覆盖已验证的额度/用量，`result.models` 会保持为空。只有 usage 未匹配时，models endpoint 才作为 Sub2API provider 的回退识别路径。
+Sub2API 的 `/v1/usage` 与 `/v1/models` 是网关代理端点，可能把额外请求转发到上游模型服务。usage 验证成功后会继续请求一次 OpenAI 兼容的 models endpoint；当 Base URL 已以 `/v1` 结尾时请求 `/models`，否则请求 `/v1/models`，并将发现的模型与 usage 结果合并。模型发现失败不会覆盖已验证的额度/用量，`result.models` 会保持为空。
+
+当没有任何 usage/quota adapter（New API、Sub2API、Generic Probe）识别出 provider 时，Model discovery 作为中性的 `OpenAI-compatible` 回退：只要 `/v1/models`（或 `/models`）成功即可返回该 Key 可见的模型列表，`result.platform` 固定为 `OpenAI-compatible`，余额、用量和到期信息按未知（`null`）处理，而不是误报为 Sub2API。这与 New API 或 Sub2API 配额接口被反爬（如返回验证 HTML）或 404 时的一致：检查仍能为 Key 呈现模型，但不会声称识别出具体 provider（诊断 `attempts` 会如实记录各 endpoint 的失败原因）。
 
 ## 部署
 

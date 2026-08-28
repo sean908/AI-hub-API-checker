@@ -9,7 +9,8 @@ export interface FetchJsonResult {
 export class UpstreamFetchError extends Error {
   constructor(
     public readonly code: "timeout" | "network_error" | "response_too_large" | "invalid_json",
-    message: string
+    message: string,
+    public readonly httpStatus?: number
   ) {
     super(message);
   }
@@ -38,7 +39,7 @@ export async function fetchJsonWithLimits(
     try {
       json = text.length > 0 ? JSON.parse(text) : null;
     } catch {
-      throw new UpstreamFetchError("invalid_json", "upstream returned non-JSON response");
+      throw new UpstreamFetchError("invalid_json", "upstream returned non-JSON response", response.status);
     }
 
     return {
